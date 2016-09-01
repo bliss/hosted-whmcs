@@ -43,6 +43,8 @@ WHMCS_ARCHIVE=$(ls /var/opt/persistent/whmcs*.zip 2>/dev/null)
 
 VARS=/var/opt/persistent/vars.sh
 test -e $VARS && rm -f $VARS
+touch $VARS
+chmod g-rwx,o-rwx $VARS
 for var in WHMCS_DB_USER WHMCS_DB_HOST WHMCS_DB_NAME WHMCS_DB_PASSWORD WHMCS_LICENSE ADMIN_NAME ADMIN_FIRST_NAME ADMIN_LAST_NAME ADMIN_PASSWORD ADMIN_EMAIL;do
     if [[ ! -z ${!var} ]];then
         echo "$var=${!var}" >> $VARS
