@@ -5,6 +5,7 @@ PHPFPMINI=/etc/php/5.6/fpm/php.ini
 PHPVERSION=$(php --version | grep '^PHP' | sed 's/PHP \([0-9]\.[0-9]*\).*$/\1/')
 ROOT=/var/opt/whmcs
 NGINX_CONF=/etc/nginx/sites-enabled/default
+WHMCSCONF=/var/opt/persistent/configuration.php
 
 # Display PHP error's or not
 if [[ "$ERRORS" == "true" ]] ; then
@@ -57,15 +58,17 @@ if [[ ! -z WHMCS_ARCHIVE ]];then
     if [[ ! -e "$ROOT/.release" || $(cat $ROOT/.release) != $WHMCS_ARCHIVE_RELEASE ]]; then
         test -d $ROOT || mkdir $ROOT
         unzip -o $WHMCS_ARCHIVE -d $ROOT
-        touch /var/opt/persistent/configuration.php
-        chown www-data.www-data /var/opt/persistent/configuration.php
-        test -e $ROOT/configuration.php || ln -s /var/opt/persistent/configuration.php $ROOT
+        touch $WHMCSCONF
+        chown www-data.www-data $WHMCSCONF
+        test -e $ROOT/configuration.php || ln -s WHMCSCONF $ROOT
         test -e /loghandler.php && mv /loghandler.php $ROOT/install
         chown -R www-data.www-data $ROOT
         rm -f $WHMCS_ARCHIVE
         rm -f /loghandler.php
     fi
 fi
+
+test -s $WHMCSCONF && rm -rf $ROOT/install
 
 crontab -l | grep -q "php -q $ROOT/crons/cron.php" || echo "0 0  *  *  * php -q $ROOT/crons/cron.php" | crontab -
 
