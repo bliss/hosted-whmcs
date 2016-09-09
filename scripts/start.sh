@@ -60,7 +60,7 @@ if [[ ! -z WHMCS_ARCHIVE ]];then
         unzip -o $WHMCS_ARCHIVE -d $ROOT
         touch $WHMCSCONF
         chown www-data.www-data $WHMCSCONF
-        test -e $ROOT/configuration.php || ln -s WHMCSCONF $ROOT
+        test -e $ROOT/configuration.php || ln -s $WHMCSCONF $ROOT
         test -e /loghandler.php && mv /loghandler.php $ROOT/install
         chown -R www-data.www-data $ROOT
         rm -f $WHMCS_ARCHIVE
