@@ -6,7 +6,6 @@ PHPVERSION=$(php --version | grep '^PHP' | sed 's/PHP \([0-9]\.[0-9]*\).*$/\1/')
 ROOT=/var/opt/whmcs
 NGINX_CONF=/etc/nginx/sites-enabled/default
 WHMCSCONF=/var/opt/persistent/configuration.php
-
 # Display PHP error's or not
 if [[ "$ERRORS" == "true" ]] ; then
   sed -i -e "s/error_reporting\s*=.*/error_reporting = E_ALL/" \
@@ -38,17 +37,18 @@ fi
 grep -q "zend_extension = /usr/local/ioncube/ioncube_loader_lin_$PHPVERSION.so" $PHPFPMINI \
   || echo zend_extension = /usr/local/ioncube/ioncube_loader_lin_$PHPVERSION.so >>$PHPFPMINI
 
+grep -q "zend_extension = /usr/local/ioncube/ioncube_loader_lin_$PHPVERSION.so" $PHPINI \
+  || echo zend_extension = /usr/local/ioncube/ioncube_loader_lin_$PHPVERSION.so >>$PHPINI
+
 test -e /whmcs*.zip && mv /whmcs*.zip /var/opt/persistent
 
 WHMCS_ARCHIVE=$(ls /var/opt/persistent/whmcs*.zip 2>/dev/null)
 
 VARS=/var/opt/persistent/vars.sh
-test -e $VARS && rm -f $VARS
-touch $VARS
-chmod g-rwx,o-rwx $VARS
-for var in WHMCS_DB_USER WHMCS_DB_HOST WHMCS_DB_NAME WHMCS_DB_PASSWORD WHMCS_LICENSE ADMIN_NAME ADMIN_FIRST_NAME ADMIN_LAST_NAME ADMIN_PASSWORD ADMIN_EMAIL;do
+for var in DB_USERNAME DB_HOST DB_NAME DB_PASSWORD LICENSE TEMPLATES_COMPILEDIR;do
     if [[ ! -z ${!var} ]];then
-        echo "$var=${!var}" >> $VARS
+        lcvar=$(echo "$var" | tr '[:upper:]' '[:lower:]')
+        echo "\$$lcvar = '${!var}';" >> $VARS
         unset $var
     fi
 done
@@ -58,7 +58,21 @@ if [[ ! -z WHMCS_ARCHIVE ]];then
     if [[ ! -e "$ROOT/.release" || $(cat $ROOT/.release) != $WHMCS_ARCHIVE_RELEASE ]]; then
         test -d $ROOT || mkdir $ROOT
         unzip -o $WHMCS_ARCHIVE -d $ROOT
-        touch $WHMCSCONF
+        if [[ ! -d $ROOT/install && -d $ROOT/whmcs ]];then
+            mv $ROOT/whmcs/* $ROOT
+            rm -rf $ROOT/whmcs
+        fi
+        if [[ ! -e $WHMCSCONF ]];then
+            echo "<?php" >> $WHMCSCONF
+            cat $VARS >> $WHMCSCONF
+            EHASH=$(date +%s | sha256sum | base64 | head -c 63)
+            echo "\$cc_encryption_hash = '$EHASH';" >> $WHMCSCONF
+            grep -q templates_compiledir $WHMCSCONF || echo "\$templates_compiledir = 'templates_c';" >> $WHMCSCONF
+            echo "\$mysql_charset = 'utf8';" >> $WHMCSCONF
+            chown www-data.www-data $WHMCSCONF
+            test -e $ROOT/configuration.php || ln -s $WHMCSCONF $ROOT
+            cd $ROOT && php install/bin/installer.php --install --non-interactive | grep -i "^\(username\|password\)" > /var/opt/persistent/credentials
+        fi
         chown www-data.www-data $WHMCSCONF
         test -e $ROOT/configuration.php || ln -s $WHMCSCONF $ROOT
         test -e /loghandler.php && mv /loghandler.php $ROOT/install
@@ -68,7 +82,8 @@ if [[ ! -z WHMCS_ARCHIVE ]];then
     fi
 fi
 
-test -s $WHMCSCONF && rm -rf $ROOT/install
+test -e $VARS && rm -f $VARS
+rm -rf $ROOT/install
 
 crontab -l | grep -q "php -q $ROOT/crons/cron.php" || echo "0 0  *  *  * php -q $ROOT/crons/cron.php" | crontab -
 

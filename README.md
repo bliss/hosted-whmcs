@@ -1,5 +1,5 @@
 ## Introduction
-This Dockerfile will build a container image for nginx with php-fpm for running WHMCS. It ships with ionCube loader as well as WHMCS itself (v7.0 beta at present). The image is based on Ubuntu 14.04 and nginx+php-fpm.
+This Dockerfile will build a container image for nginx with php-fpm for running WHMCS. It ships with ionCube loader as well as WHMCS itself (v7.0 RC1 at present). The image is based on Ubuntu 14.04 and nginx+php-fpm.
 
 **Note**: You will need a valid [WHMCS license](http://www.whmcs.com) to use WHMCS.
 
@@ -39,16 +39,39 @@ Syntax: `-v /host/path:/container/path`
 
 You can use Docker to link a path within the container to a path on the host. For example, to expose the web server's document root on the Docker host at `/opt/whmcs`, you could use:
 
-	docker run --name kd_whmcs -p 80:80 -d -v /opt/whmcs:/usr/share/nginx/html sedpro/kd-whmcs
+	docker run --name kd_whmcs -p 80:80 -d -v /opt/whmcs:/usr/share/nginx/html bliss/hosted-whmcs
+
+#### Configuration
+
+This image expects MySQL connection parameters and license to be passed as environment variables:
+
+#### DB_USERNAME
+
+Username to log in to MySQL server
+
+#### DB_HOST
+
+MySQL host IP address or name
+
+#### DB_NAME
+
+MySQL database
+
+#### DB_PASSWORD
+
+MySQL user password
+
+#### LICENSE
+
+WHMCS license
+
+#### TEMPLATES_COMPILEDIR
+
+Optional. If not specified templates_compiledir defaults to templates_c
 
 #### SERVER_NAME
 
 By default, virtual host server name is not set. Just pass environment variable SERVER_NAME to set it (it's required for license verification)
-
-
-#### Configuration
-
-configuration.php file is placed to volume and symlinked to survive container restarts.
 
 #### PHP Errors
 
