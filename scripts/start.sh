@@ -92,7 +92,7 @@ if [[ ! -z WHMCS_ARCHIVE ]];then
 fi
 
 test -e $VARS && rm -f $VARS
-#rm -rf $ROOT/install
+rm -rf $ROOT/install
 
 crontab -l | grep -q "php -q $ROOT/crons/cron.php" || echo "0 0  *  *  * php -q $ROOT/crons/cron.php" | crontab -
 
