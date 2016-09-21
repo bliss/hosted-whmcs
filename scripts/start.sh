@@ -71,7 +71,16 @@ if [[ ! -z WHMCS_ARCHIVE ]];then
             echo "\$mysql_charset = 'utf8';" >> $WHMCSCONF
             chown www-data.www-data $WHMCSCONF
             test -e $ROOT/configuration.php || ln -s $WHMCSCONF $ROOT
-            cd $ROOT && php install/bin/installer.php --install --non-interactive | grep -i "^\(username\|password\)" > /var/opt/persistent/credentials
+            cd $ROOT
+            COUNTER=1
+            while [[ $COUNTER -le 20 ]];do
+                echo "Attempt $COUNTER to deploy"
+                php install/bin/installer.php --install --non-interactive 2>&1 | tee $ROOT/install/deploy.log
+                grep -qi "^\(username\|password\)" $ROOT/install/deploy.log && break
+                COUNTER=$(( COUNTER+1 ))
+                sleep 15
+            done
+            cat $ROOT/install/deploy.log | grep -i "^\(username\|password\)" > /var/opt/persistent/credentials
         fi
         chown www-data.www-data $WHMCSCONF
         test -e $ROOT/configuration.php || ln -s $WHMCSCONF $ROOT
@@ -83,7 +92,7 @@ if [[ ! -z WHMCS_ARCHIVE ]];then
 fi
 
 test -e $VARS && rm -f $VARS
-rm -rf $ROOT/install
+#rm -rf $ROOT/install
 
 crontab -l | grep -q "php -q $ROOT/crons/cron.php" || echo "0 0  *  *  * php -q $ROOT/crons/cron.php" | crontab -
 
