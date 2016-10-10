@@ -92,8 +92,8 @@ fi
 if [ ! -z "$PASSWORD" ];then
     php /preset.php
     unset PASSWORD
-    rm -f /preset.php
 fi
+rm -f /preset.php
 test -e $VARS && rm -f $VARS
 rm -rf $ROOT/install
 
