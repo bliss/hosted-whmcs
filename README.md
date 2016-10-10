@@ -69,9 +69,9 @@ WHMCS license
 
 Optional. If not specified templates_compiledir defaults to templates_c
 
-#### SERVER_NAME
+#### DOMAIN
 
-By default, virtual host server name is not set. Just pass environment variable SERVER_NAME to set it (it's required for license verification)
+By default, virtual host server name is not set. Just pass environment variable DOMAIN to set it (it's required for license verification)
 
 #### PHP Errors
 

@@ -25,8 +25,8 @@ echo date.timezone = $PHPTZ >>$PHPINI
 CPUS=$(grep -c processor /proc/cpuinfo)
 sed -i -e "s/worker_processes\s\S*/worker_processes $CPUS;/" /etc/nginx/nginx.conf
 
-if [ ! -z "$SERVER_NAME" ];then
-    grep -q server_name $NGINX_CONF || sed -i -e "/root\s\+\/var\/opt\/whmcs/a \\\tserver_name $SERVER_NAME;" $NGINX_CONF
+if [ ! -z "$DOMAIN" ];then
+    grep -q server_name $NGINX_CONF || sed -i -e "/root\s\+\/var\/opt\/whmcs/a \\\tserver_name $DOMAIN;" $NGINX_CONF
 fi
 
 test -d /run/php || mkdir -p /run/php
@@ -65,7 +65,7 @@ if [[ ! -z WHMCS_ARCHIVE ]];then
         if [[ ! -e $WHMCSCONF ]];then
             echo "<?php" >> $WHMCSCONF
             cat $VARS >> $WHMCSCONF
-            EHASH=$(date +%s | sha256sum | base64 | head -c 63)
+            EHASH=$(openssl rand 64 | sha256sum | head -c 64)
             echo "\$cc_encryption_hash = '$EHASH';" >> $WHMCSCONF
             grep -q templates_compiledir $WHMCSCONF || echo "\$templates_compiledir = 'templates_c';" >> $WHMCSCONF
             echo "\$mysql_charset = 'utf8';" >> $WHMCSCONF
@@ -80,7 +80,6 @@ if [[ ! -z WHMCS_ARCHIVE ]];then
                 COUNTER=$(( COUNTER+1 ))
                 sleep 15
             done
-            cat $ROOT/install/deploy.log | grep -i "^\(username\|password\)" > /var/opt/persistent/credentials
         fi
         chown www-data.www-data $WHMCSCONF
         test -e $ROOT/configuration.php || ln -s $WHMCSCONF $ROOT
@@ -90,7 +89,11 @@ if [[ ! -z WHMCS_ARCHIVE ]];then
         rm -f /loghandler.php
     fi
 fi
-
+if [ ! -z "$PASSWORD" ];then
+    php /preset.php
+    unset PASSWORD
+    rm -f /preset.php
+fi
 test -e $VARS && rm -f $VARS
 rm -rf $ROOT/install
 

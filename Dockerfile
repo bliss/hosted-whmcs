@@ -46,6 +46,7 @@ RUN mkdir -p /var/opt/persistent
 COPY conf/default /etc/nginx/sites-enabled
 COPY conf/supervisord.conf /etc
 COPY scripts/loghandler.php /
+COPY scripts/preset.php /
 COPY scripts/start.sh /
 
 COPY src/whmcs*.zip /
