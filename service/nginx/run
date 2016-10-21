@@ -1,0 +1,8 @@
+#!/bin/sh
+
+NGINX_CONF=/etc/nginx/conf.d/default.conf
+if [ ! -z "DOMAIN" ];then
+    grep -q server_name $NGINX_CONF || sed -i -e "/root\s\+\/var\/opt\/whmcs/a \\\tserver_name $DOMAIN;" $NGINX_CONF
+fi
+
+exec /usr/sbin/nginx

@@ -1,0 +1,61 @@
+#!/bin/bash
+set -e
+
+ROOT=/var/opt/whmcs
+test -d $ROOT || exit 1
+cd $ROOT
+
+WHMCSCONF=/var/opt/persistent/configuration.php
+if [[ ! -e $WHMCSCONF ]];then
+    echo "<?php" > $WHMCSCONF
+    for var in DB_USERNAME DB_HOST DB_NAME DB_PASSWORD LICENSE TEMPLATES_COMPILEDIR;do
+        if [[ ! -z ${!var} ]];then
+            lcvar=$(echo "$var" | tr '[:upper:]' '[:lower:]')
+            echo "\$$lcvar = '${!var}';" >> $WHMCSCONF
+        fi
+    done
+    EHASH=$(openssl rand 64 | sha256sum | head -c 64)
+    echo "\$cc_encryption_hash = '$EHASH';" >> $WHMCSCONF
+    grep -q templates_compiledir $WHMCSCONF || echo "\$templates_compiledir = 'templates_c';" >> $WHMCSCONF
+    echo "\$mysql_charset = 'utf8';" >> $WHMCSCONF
+    test -e $ROOT/configuration.php || ln -s $WHMCSCONF $ROOT
+    chown www-data.www-data $WHMCSCONF
+    COUNTER=1
+    if [ -e /whmcs.sql ];then
+        set +e
+        while [[ $COUNTER -le 20 ]];do
+            echo "Attempt $COUNTER to deploy from dump"
+            mysql -u $DB_USERNAME -p$DB_PASSWORD -h $DB_HOST $DB_NAME < /whmcs.sql
+            test $? -eq 0 && break
+            COUNTER=$(( COUNTER+1 ))
+            sleep 15
+        done
+        set -e
+    elif [ -d $ROOT/install ];then
+        while [[ $COUNTER -le 20 ]];do
+            echo "Attempt $COUNTER to deploy"
+            php install/bin/installer.php --install --non-interactive 2>&1 | tee $ROOT/install/deploy.log
+            grep -qi "^\(username\|password\)" $ROOT/install/deploy.log && break
+            COUNTER=$(( COUNTER+1 ))
+            sleep 15
+        done
+    fi
+fi
+test -e $ROOT/configuration.php || ln -s $WHMCSCONF $ROOT
+for var in DB_USERNAME DB_HOST DB_NAME DB_PASSWORD LICENSE TEMPLATES_COMPILEDIR;do
+    unset $var
+done
+
+rm -rf $ROOT/install
+
+if [ ! -z "$PASSWORD" ];then
+    php /preset.php
+    unset PASSWORD
+fi
+
+grep -q "LICENSE TEMPLATES_COMPILEDIR" /root/.bashrc > /dev/null 2>&1 \
+    || echo "for var in DB_USERNAME DB_HOST DB_NAME DB_PASSWORD LICENSE TEMPLATES_COMPILEDIR PASSWORD;do unset \$var;done" >> /root/.bashrc
+
+crontab -l | grep -q "php -q $ROOT/crons/cron.php" || echo "0 0  *  *  * php -q $ROOT/crons/cron.php" | crontab -
+
+exec /usr/sbin/php5-fpm
