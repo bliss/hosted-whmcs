@@ -34,6 +34,7 @@ RUN set -xe \
                                             unzip \
                                             cron \
                                             mysql-client \
+                                            file \
     && rm -rf /var/lib/apt/lists/* \
     && sed -i -e "s/;\?cgi.fix_pathinfo\s*=\s*1/cgi.fix_pathinfo = 0/" \
     -e "s/;\?upload_max_filesize\s*=\s*2M/upload_max_filesize = 100M/" \
@@ -58,26 +59,23 @@ RUN set -x \
     && rm -rf /tmp/ioncube
 
 COPY whmcs.sql /
+RUN test -d /var/opt/whmcs || mkdir -p /var/opt/whmcs
 RUN test -d /var/opt/persistent || mkdir -p /var/opt/persistent
-
 COPY src/whmcs*.zip /
-RUN set -x \
-    && ARCHIVE=$(ls /whmcs*.zip) \
-    && unzip -o $ARCHIVE -d /var/opt \
-    && rm -f $ARCHIVE
 
 COPY service/ /etc/service
 
 COPY runit-docker_1.1_amd64.deb /
 RUN dpkg -i /runit-docker_1.1_amd64.deb && rm -f /runit-docker_1.1_amd64.deb
 
-COPY scripts/loghandler.php /var/opt/whmcs/install
+COPY scripts/loghandler.php /
 COPY scripts/preset.php /
-RUN chown -R www-data.www-data /var/opt/whmcs
+COPY scripts/dbdump.sh /
+COPY scripts/dbload.sh /
 
 WORKDIR /var/opt/whmcs
 
-VOLUME ["/var/opt/persistent"] 
+VOLUME ["/var/opt/persistent"]
 
 EXPOSE 80 443
 

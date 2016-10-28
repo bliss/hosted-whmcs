@@ -2,11 +2,18 @@
 set -e
 
 ROOT=/var/opt/whmcs
-test -d $ROOT || exit 1
+test -d $ROOT || mkdir $ROOT
 cd $ROOT
 
 WHMCSCONF=/var/opt/persistent/configuration.php
 if [[ ! -e $WHMCSCONF ]];then
+    ARCHIVE=$(ls /whmcs*.zip)
+    unzip -o $ARCHIVE -d $ROOT
+    if [[ ! -d $ROOT/install && -d $ROOT/whmcs ]];then
+        mv $ROOT/whmcs/* $ROOT
+        rm -rf $ROOT/whmcs
+    fi
+    cp /loghandler.php $ROOT/install
     echo "<?php" > $WHMCSCONF
     for var in DB_USERNAME DB_HOST DB_NAME DB_PASSWORD LICENSE TEMPLATES_COMPILEDIR;do
         if [[ ! -z ${!var} ]];then
@@ -46,16 +53,20 @@ for var in DB_USERNAME DB_HOST DB_NAME DB_PASSWORD LICENSE TEMPLATES_COMPILEDIR;
     unset $var
 done
 
-rm -rf $ROOT/install
-
 if [ ! -z "$PASSWORD" ];then
     php /preset.php
     unset PASSWORD
 fi
 
+set +e
+rm -rf $ROOT/install
+chown -R www-data.www-data $ROOT/*
+set -e
+
 grep -q "LICENSE TEMPLATES_COMPILEDIR" /root/.bashrc > /dev/null 2>&1 \
     || echo "for var in DB_USERNAME DB_HOST DB_NAME DB_PASSWORD LICENSE TEMPLATES_COMPILEDIR PASSWORD;do unset \$var;done" >> /root/.bashrc
 
 crontab -l | grep -q "php -q $ROOT/crons/cron.php" || echo "0 0  *  *  * php -q $ROOT/crons/cron.php" | crontab -
+crontab -l | grep -q "dbdump" || echo "30 23  *  *  * /dbdump.sh" | crontab -
 
 exec /usr/sbin/php5-fpm
