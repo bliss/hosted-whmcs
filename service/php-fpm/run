@@ -66,7 +66,6 @@ set -e
 grep -q "LICENSE TEMPLATES_COMPILEDIR" /root/.bashrc > /dev/null 2>&1 \
     || echo "for var in DB_USERNAME DB_HOST DB_NAME DB_PASSWORD LICENSE TEMPLATES_COMPILEDIR PASSWORD;do unset \$var;done" >> /root/.bashrc
 
-crontab -l | grep -q "php -q $ROOT/crons/cron.php" || echo "0 0  *  *  * php -q $ROOT/crons/cron.php" | crontab -
-crontab -l | grep -q "dbdump" || echo "30 23  *  *  * /dbdump.sh" | crontab -
+crontab -l | grep -q "cron.php|dbdump.sh" || (echo "0 0  *  *  * php -q $ROOT/crons/cron.php"; echo "30 23  *  *  * /dbdump.sh") | crontab -
 
 exec /usr/sbin/php5-fpm
