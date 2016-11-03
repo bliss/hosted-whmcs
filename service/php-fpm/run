@@ -49,14 +49,12 @@ if [[ ! -e $WHMCSCONF ]];then
     fi
 fi
 test -e $ROOT/configuration.php || ln -s $WHMCSCONF $ROOT
-for var in DB_USERNAME DB_HOST DB_NAME DB_PASSWORD LICENSE TEMPLATES_COMPILEDIR;do
+
+php /preset.php
+
+for var in DB_USERNAME DB_HOST DB_NAME DB_PASSWORD LICENSE TEMPLATES_COMPILEDIR PASSWORD SMTP_USERNAME SMTP_PASSWORD SMTP_HOST;do
     unset $var
 done
-
-if [ ! -z "$PASSWORD" ];then
-    php /preset.php
-    unset PASSWORD
-fi
 
 set +e
 rm -rf $ROOT/install
@@ -64,7 +62,7 @@ chown -R www-data.www-data $ROOT/*
 set -e
 
 grep -q "LICENSE TEMPLATES_COMPILEDIR" /root/.bashrc > /dev/null 2>&1 \
-    || echo "for var in DB_USERNAME DB_HOST DB_NAME DB_PASSWORD LICENSE TEMPLATES_COMPILEDIR PASSWORD;do unset \$var;done" >> /root/.bashrc
+    || echo "for var in DB_USERNAME DB_HOST DB_NAME DB_PASSWORD LICENSE TEMPLATES_COMPILEDIR PASSWORD SMTP_USERNAME SMTP_PASSWORD SMTP_HOST;do unset \$var;done" >> /root/.bashrc
 
 crontab -l | grep -q "cron.php|dbdump.sh" || (echo "0 0  *  *  * php -q $ROOT/crons/cron.php"; echo "30 23  *  *  * /dbdump.sh") | crontab -
 
