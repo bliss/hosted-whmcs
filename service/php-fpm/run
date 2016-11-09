@@ -2,29 +2,62 @@
 set -e
 
 ROOT=/var/opt/whmcs
+PERSISTENT=/var/opt/persistent
 test -d $ROOT || mkdir $ROOT
 cd $ROOT
 
-WHMCSCONF=/var/opt/persistent/configuration.php
-if [[ ! -e $WHMCSCONF ]];then
-    ARCHIVE=$(ls /whmcs*.zip)
+ARCHIVE=$(ls /whmcs*.zip)
+if [ ! -d $ROOT/includes ];then
     unzip -o $ARCHIVE -d $ROOT
     if [[ ! -d $ROOT/install && -d $ROOT/whmcs ]];then
         mv $ROOT/whmcs/* $ROOT
         rm -rf $ROOT/whmcs
     fi
     cp /loghandler.php $ROOT/install
+fi
+
+for i in attachments downloads templates_c;do
+    if [ ! -d $PERSISTENT/$i ];then
+        cp -r $ROOT/$i $PERSISTENT
+    fi
+    rm -rf $ROOT/$i
+done
+
+if [ ! -d $PERSISTENT/crons ];then
+    cp -r $ROOT/crons $PERSISTENT
+    rm -f $PERSISTENT/crons/config.php.new
+    echo "<?php" > $PERSISTENT/crons/config.php
+    echo "\$whmcspath = '$ROOT';" >> $PERSISTENT/crons/config.php
+
+fi
+rm -rf $ROOT/crons
+
+set +e
+KDPLUGIN=$(ls $PERSISTENT/whmcs-kuberdock-plugin*.zip 2>/dev/null)
+set -e
+if [[ -n "$KDPLUGIN" && -e "$KDPLUGIN" ]];then
+    unzip -o $KDPLUGIN -d $ROOT
+    test $ROOT/deploy.php && rm -f $ROOT/deploy.php
+fi
+
+WHMCSCONF=$PERSISTENT/configuration.php
+if [[ ! -e $WHMCSCONF ]];then
     echo "<?php" > $WHMCSCONF
-    for var in DB_USERNAME DB_HOST DB_NAME DB_PASSWORD LICENSE TEMPLATES_COMPILEDIR;do
+    for var in DB_USERNAME DB_HOST DB_NAME DB_PASSWORD LICENSE;do
         if [[ ! -z ${!var} ]];then
             lcvar=$(echo "$var" | tr '[:upper:]' '[:lower:]')
             echo "\$$lcvar = '${!var}';" >> $WHMCSCONF
         fi
     done
     EHASH=$(openssl rand 64 | sha256sum | head -c 64)
-    echo "\$cc_encryption_hash = '$EHASH';" >> $WHMCSCONF
-    grep -q templates_compiledir $WHMCSCONF || echo "\$templates_compiledir = 'templates_c';" >> $WHMCSCONF
-    echo "\$mysql_charset = 'utf8';" >> $WHMCSCONF
+    cat >> $WHMCSCONF <<EOF
+\$cc_encryption_hash = '$EHASH';
+\$attachments_dir = '$PERSISTENT/attachments';
+\$downloads_dir = '$PERSISTENT/downloads';
+\$templates_compiledir = '$PERSISTENT/templates_c';
+\$crons_dir = '$PERSISTENT/crons';
+\$mysql_charset = 'utf8';
+EOF
     test -e $ROOT/configuration.php || ln -s $WHMCSCONF $ROOT
     chown www-data.www-data $WHMCSCONF
     COUNTER=1
@@ -59,11 +92,12 @@ done
 set +e
 rm -rf $ROOT/install
 chown -R www-data.www-data $ROOT/*
+chown -R www-data.www-data $PERSISTENT/*
 set -e
 
-grep -q "LICENSE TEMPLATES_COMPILEDIR" /root/.bashrc > /dev/null 2>&1 \
-    || echo "for var in DB_USERNAME DB_HOST DB_NAME DB_PASSWORD LICENSE TEMPLATES_COMPILEDIR PASSWORD SMTP_USERNAME SMTP_PASSWORD SMTP_HOST;do unset \$var;done" >> /root/.bashrc
+grep -q "DB_PASSWORD LICENSE" /root/.bashrc > /dev/null 2>&1 \
+    || echo "for var in DB_USERNAME DB_HOST DB_NAME DB_PASSWORD LICENSE PASSWORD SMTP_USERNAME SMTP_PASSWORD SMTP_HOST;do unset \$var;done" >> /root/.bashrc
 
-crontab -l | grep -q "cron.php|dbdump.sh" || (echo "0 0  *  *  * php -q $ROOT/crons/cron.php"; echo "30 23  *  *  * /dbdump.sh") | crontab -
+crontab -l | grep -q "cron.php|dbdump.sh" || (echo "0 0  *  *  * php -q $PERSISTENT/crons/cron.php"; echo "30 23  *  *  * /dbdump.sh") | crontab -
 
 exec /usr/sbin/php5-fpm
