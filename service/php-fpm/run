@@ -6,15 +6,15 @@ PERSISTENT=/var/opt/persistent
 test -d $ROOT || mkdir $ROOT
 cd $ROOT
 
-ARCHIVE=$(ls /whmcs*.zip)
-if [ ! -d $ROOT/includes ];then
-    unzip -o $ARCHIVE -d $ROOT
-    if [[ ! -d $ROOT/install && -d $ROOT/whmcs ]];then
-        mv $ROOT/whmcs/* $ROOT
-        rm -rf $ROOT/whmcs
-    fi
-    cp /loghandler.php $ROOT/install
-fi
+#ARCHIVE=$(ls /whmcs*.zip)
+#if [ ! -d $ROOT/includes ];then
+#    unzip -o $ARCHIVE -d $ROOT
+#    if [[ ! -d $ROOT/install && -d $ROOT/whmcs ]];then
+#        mv $ROOT/whmcs/* $ROOT
+#        rm -rf $ROOT/whmcs
+#    fi
+#    cp /loghandler.php $ROOT/install
+#fi
 
 for i in attachments downloads templates_c;do
     if [ ! -d $PERSISTENT/$i ];then
@@ -28,7 +28,7 @@ if [ ! -d $PERSISTENT/crons ];then
     rm -f $PERSISTENT/crons/config.php.new
     echo "<?php" > $PERSISTENT/crons/config.php
     echo "\$whmcspath = '$ROOT';" >> $PERSISTENT/crons/config.php
-
+    
 fi
 rm -rf $ROOT/crons
 
@@ -61,25 +61,15 @@ EOF
     test -e $ROOT/configuration.php || ln -s $WHMCSCONF $ROOT
     chown www-data.www-data $WHMCSCONF
     COUNTER=1
-    if [ -e /whmcs.sql ];then
-        set +e
-        while [[ $COUNTER -le 20 ]];do
-            echo "Attempt $COUNTER to deploy from dump"
-            mysql -u $DB_USERNAME -p$DB_PASSWORD -h $DB_HOST $DB_NAME < /whmcs.sql
-            test $? -eq 0 && break
-            COUNTER=$(( COUNTER+1 ))
-            sleep 15
-        done
-        set -e
-    elif [ -d $ROOT/install ];then
-        while [[ $COUNTER -le 20 ]];do
-            echo "Attempt $COUNTER to deploy"
-            php install/bin/installer.php --install --non-interactive 2>&1 | tee $ROOT/install/deploy.log
-            grep -qi "^\(username\|password\)" $ROOT/install/deploy.log && break
-            COUNTER=$(( COUNTER+1 ))
-            sleep 15
-        done
-    fi
+    set +e
+    while [[ $COUNTER -le 20 ]];do
+        echo "Attempt $COUNTER to deploy from dump"
+        mysql -u $DB_USERNAME -p$DB_PASSWORD -h $DB_HOST $DB_NAME < /whmcs.sql
+        test $? -eq 0 && break
+        COUNTER=$(( COUNTER+1 ))
+        sleep 15
+    done
+    set -e
 fi
 test -e $ROOT/configuration.php || ln -s $WHMCSCONF $ROOT
 
@@ -98,6 +88,9 @@ set -e
 grep -q "DB_PASSWORD LICENSE" /root/.bashrc > /dev/null 2>&1 \
     || echo "for var in DB_USERNAME DB_HOST DB_NAME DB_PASSWORD LICENSE PASSWORD SMTP_USERNAME SMTP_PASSWORD SMTP_HOST;do unset \$var;done" >> /root/.bashrc
 
-crontab -l | grep -q "cron.php|dbdump.sh" || (echo "0 0  *  *  * php -q $PERSISTENT/crons/cron.php"; echo "30 23  *  *  * /dbdump.sh") | crontab -
+HOUR=$(($RANDOM%24))
+NHOUR=$((($HOUR+1)%24))
+MIN=$(($RANDOM%60))
+crontab -l | grep -q "cron.php|dbdump.sh" || (echo "$MIN $HOUR  *  *  * php -q $PERSISTENT/crons/cron.php"; echo "$MIN $NHOUR  *  *  * /dbdump.sh") | crontab -
 
 exec /usr/sbin/php5-fpm
