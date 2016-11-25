@@ -63,14 +63,6 @@ RUN test -d /var/opt/whmcs || mkdir -p /var/opt/whmcs
 RUN test -d /var/opt/persistent || mkdir -p /var/opt/persistent
 COPY src/whmcs*.zip /
 
-RUN set -x \
-    && ARCHIVE=$(ls /whmcs*.zip) \
-    && ROOT=/var/opt/whmcs \
-    && unzip -o $ARCHIVE -d $ROOT \
-    && if [ ! -d $ROOT/install ] && [ -d $ROOT/whmcs ];then mv $ROOT/whmcs/* $ROOT && rm -rf $ROOT/whmcs; fi \
-    && rm -rf $ROOT/install \
-    && rm -f $ARCHIVE
-
 COPY service/ /etc/service
 
 COPY runit-docker_1.1_amd64.deb /

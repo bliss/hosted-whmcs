@@ -6,15 +6,15 @@ PERSISTENT=/var/opt/persistent
 test -d $ROOT || mkdir $ROOT
 cd $ROOT
 
-#ARCHIVE=$(ls /whmcs*.zip)
-#if [ ! -d $ROOT/includes ];then
-#    unzip -o $ARCHIVE -d $ROOT
-#    if [[ ! -d $ROOT/install && -d $ROOT/whmcs ]];then
-#        mv $ROOT/whmcs/* $ROOT
-#        rm -rf $ROOT/whmcs
-#    fi
-#    cp /loghandler.php $ROOT/install
-#fi
+ARCHIVE=$(ls /whmcs*.zip)
+if [ ! -d $ROOT/includes ];then
+    unzip -o $ARCHIVE -d $ROOT
+    if [[ ! -d $ROOT/install && -d $ROOT/whmcs ]];then
+        mv $ROOT/whmcs/* $ROOT
+        rm -rf $ROOT/whmcs
+    fi
+    cp /loghandler.php $ROOT/install
+fi
 
 for i in attachments downloads templates_c;do
     if [ ! -d $PERSISTENT/$i ];then
@@ -61,15 +61,25 @@ EOF
     test -e $ROOT/configuration.php || ln -s $WHMCSCONF $ROOT
     chown www-data.www-data $WHMCSCONF
     COUNTER=1
-    set +e
-    while [[ $COUNTER -le 20 ]];do
-        echo "Attempt $COUNTER to deploy from dump"
-        mysql -u $DB_USERNAME -p$DB_PASSWORD -h $DB_HOST $DB_NAME < /whmcs.sql
-        test $? -eq 0 && break
-        COUNTER=$(( COUNTER+1 ))
-        sleep 15
-    done
-    set -e
+    if [ -e /whmcs.sql ];then
+        set +e
+        while [[ $COUNTER -le 20 ]];do
+            echo "Attempt $COUNTER to deploy from dump"
+            mysql -u $DB_USERNAME -p$DB_PASSWORD -h $DB_HOST $DB_NAME < /whmcs.sql
+            test $? -eq 0 && break
+            COUNTER=$(( COUNTER+1 ))
+            sleep 15
+        done
+        set -e
+    elif [ -d $ROOT/install ];then
+        while [[ $COUNTER -le 20 ]];do
+            echo "Attempt $COUNTER to deploy"
+            php install/bin/installer.php --install --non-interactive 2>&1 | tee $ROOT/install/deploy.log
+            grep -qi "^\(username\|password\)" $ROOT/install/deploy.log && break
+            COUNTER=$(( COUNTER+1 ))
+            sleep 15
+        done
+    fi
 fi
 test -e $ROOT/configuration.php || ln -s $WHMCSCONF $ROOT
 
