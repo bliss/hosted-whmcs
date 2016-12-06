@@ -93,6 +93,7 @@ set +e
 rm -rf $ROOT/install
 chown -R www-data.www-data $ROOT/*
 chown -R www-data.www-data $PERSISTENT/*
+chown root.root $WHMCSCONF
 set -e
 
 grep -q "DB_PASSWORD LICENSE" /root/.bashrc > /dev/null 2>&1 \
