@@ -2,6 +2,9 @@
 $passwd = getenv('PASSWORD');
 $smtp_user = getenv('SMTP_USERNAME');
 $ingress = getenv('INGRESS');
+$admin_firstname = getenv('ADMIN_FIRSTNAME');
+$admin_lastname = getenv('ADMIN_LASTNAME');
+$admin_email = getenv('ADMIN_EMAIL');
 
 if (!$passwd && !$smtp_user && !$ingress) die;
 
@@ -71,7 +74,7 @@ function encrypt($string) {
 
 try {
     $db = new PDO("mysql:host=${db_host};dbname=${db_name}", $db_username, $db_password);
-
+    
     if ($passwd) {
         $st = $db->prepare("UPDATE tbladmins SET password=md5(?) WHERE username='Admin' and passwordhash=''");
         $st->execute(array($passwd));
@@ -110,11 +113,32 @@ try {
             $st->execute(array($smtp_ssl));
         }
     }
-
+    
+    if ($domain) {
+        $st = $db->prepare("UPDATE tblconfiguration SET value=? WHERE setting='SystemURL'");
+        $st->execute(array('http://' . $domain));
+    }
+    
     if ($ingress) {
         $st = $db->prepare("UPDATE tblconfiguration SET value=? WHERE setting='APIAllowedIPs'");
         $st->execute(array('a:1:{i:0;a:2:{s:2:"ip";s:' . strlen($ingress) . ':"' . $ingress . '";s:4:"note";s:7:"INGRESS";}}'));
     }
+    
+    if ($admin_firstname) {
+        $st = $db->prepare("UPDATE tbladmins SET firstname=? WHERE username='Admin'");
+        $st->execute(array($admin_firstname));
+    }
+    
+    if ($admin_lastname) {
+        $st = $db->prepare("UPDATE tbladmins SET lastname=? WHERE username='Admin'");
+        $st->execute(array($admin_lastname));
+    }
+    
+    if ($admin_email) {
+        $st = $db->prepare("UPDATE tbladmins SET email=? WHERE username='Admin'");
+        $st->execute(array($admin_email));
+    }
+    
 } catch (PDOException $e) {
     die("Database error: " . $e->getMessage());
 }

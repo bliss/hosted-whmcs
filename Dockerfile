@@ -31,6 +31,7 @@ RUN set -xe \
                                             php5-gd \
                                             php5-curl \
                                             php5-cli \
+                                            php5-imap \
                                             unzip \
                                             cron \
                                             mysql-client \
@@ -44,7 +45,8 @@ RUN set -xe \
     && sed -i -e "s/;\?catch_workers_output\s*=\s*yes/catch_workers_output = yes/" \
     -e "/^pm/ {s/dynamic/ondemand/}" \
     -e "/^pm.max_children/ {s/5/3/}" \
-    -e "/^pm.max_requests/ {s/500/200/}" /etc/php5/fpm/pool.d/www.conf
+    -e "/^pm.max_requests/ {s/500/200/}" \
+    -e "/^;\?php_admin_value\[memory_limit\]/ {s/^;\?\(.*\)[[:digit:]]\{2,\}M$/\1256M/}" /etc/php5/fpm/pool.d/www.conf
 
 COPY conf/default.conf /etc/nginx/conf.d
 

@@ -99,8 +99,7 @@ grep -q "DB_PASSWORD LICENSE" /root/.bashrc > /dev/null 2>&1 \
     || echo "for var in DB_USERNAME DB_HOST DB_NAME DB_PASSWORD LICENSE PASSWORD SMTP_USERNAME SMTP_PASSWORD SMTP_HOST;do unset \$var;done" >> /root/.bashrc
 
 HOUR=$(($RANDOM%24))
-NHOUR=$((($HOUR+1)%24))
 MIN=$(($RANDOM%60))
-crontab -l | grep -q "cron.php|dbdump.sh" || (echo "$MIN $HOUR  *  *  * php -q $PERSISTENT/crons/cron.php"; echo "$MIN $NHOUR  *  *  * /dbdump.sh") | crontab -
+crontab -l | grep -q "cron.php|dbdump.sh" || (echo "*/5 *  *  *  * php -q $PERSISTENT/crons/cron.php"; echo "$MIN $HOUR  *  *  * /dbdump.sh") | crontab -
 
 exec /usr/sbin/php5-fpm
