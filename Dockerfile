@@ -72,6 +72,7 @@ RUN dpkg -i /runit-docker_1.1_amd64.deb && rm -f /runit-docker_1.1_amd64.deb
 
 COPY scripts/loghandler.php /
 COPY scripts/preset.php /
+COPY scripts/reset.php /
 COPY scripts/dbdump.sh /
 COPY scripts/dbload.sh /
 
