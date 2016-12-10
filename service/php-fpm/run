@@ -61,24 +61,49 @@ EOF
     test -e $ROOT/configuration.php || ln -s $WHMCSCONF $ROOT
     chown www-data.www-data $WHMCSCONF
     COUNTER=1
-    if [ -e /whmcs.sql ];then
+    set +e
+    while [[ $COUNTER -le 20 ]];do
+        echo "Attempt $COUNTER to deploy from dump"
+        mysql -u $DB_USERNAME -p$DB_PASSWORD -h $DB_HOST $DB_NAME < /whmcs.sql
+        test $? -eq 0 && break
+        COUNTER=$(( COUNTER+1 ))
+        sleep 15
+    done
+    set -e
+else
+    VERSIONS=/updates/versions.txt
+    if [ -e $VERSIONS ];then
+        CURRENT=$(tail -n 1 $VERSIONS)
+        COUNTER=1
         set +e
         while [[ $COUNTER -le 20 ]];do
-            echo "Attempt $COUNTER to deploy from dump"
-            mysql -u $DB_USERNAME -p$DB_PASSWORD -h $DB_HOST $DB_NAME < /whmcs.sql
-            test $? -eq 0 && break
+            echo "Attempt $COUNTER to get current version..."
+            LAST=$(mysql -u $DB_USERNAME -p$DB_PASSWORD -h $DB_HOST $DB_NAME --skip-column-names -e "SELECT value FROM tblconfiguration WHERE setting='Version'")
+            EXIT_CODE=$?
+            test $EXIT_CODE -eq 0 && break
             COUNTER=$(( COUNTER+1 ))
             sleep 15
         done
         set -e
-    elif [ -d $ROOT/install ];then
-        while [[ $COUNTER -le 20 ]];do
-            echo "Attempt $COUNTER to deploy"
-            php install/bin/installer.php --install --non-interactive 2>&1 | tee $ROOT/install/deploy.log
-            grep -qi "^\(username\|password\)" $ROOT/install/deploy.log && break
-            COUNTER=$(( COUNTER+1 ))
-            sleep 15
-        done
+        if [[ "$EXIT_CODE" -eq 0 && "$LAST" != "$CURRENT" ]];then
+            POS=$(grep -n $LAST $VERSIONS|cut -f1 -d:)
+            if [ -z "$POS" ]; then
+                while IFS= read -r LINE;do
+                    DUMPS+=($LINE)
+                done < $VERSIONS
+                [[ $LINE ]] && DUMPS+=("$LINE")
+            else
+                POS=$(( POS+1 ))
+                while IFS= read -r LINE;do
+                    DUMPS+=($LINE)
+                done < <(tail --lines=+$POS $VERSIONS)
+                [[ $LINE ]] && DUMPS+=("$LINE")
+            fi
+            for i in ${DUMPS[@]};do
+                echo "Applying $i..."
+                mysql -u $DB_USERNAME -p$DB_PASSWORD -h $DB_HOST $DB_NAME < /updates/$i.sql
+            done
+        fi
     fi
 fi
 test -e $ROOT/configuration.php || ln -s $WHMCSCONF $ROOT
