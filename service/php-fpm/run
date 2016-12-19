@@ -40,6 +40,11 @@ if [[ -n "$KDPLUGIN" && -e "$KDPLUGIN" ]];then
     test $ROOT/deploy.php && rm -f $ROOT/deploy.php
 fi
 
+# We need a license to be always present
+if [ -z "$LICENSE" ];then
+    LICENSE=Hosted-123456789a123456789b
+fi
+
 WHMCSCONF=$PERSISTENT/configuration.php
 if [[ ! -e $WHMCSCONF ]];then
     echo "<?php" > $WHMCSCONF
