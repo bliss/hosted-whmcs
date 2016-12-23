@@ -32,6 +32,22 @@ if [ ! -d $PERSISTENT/crons ];then
 fi
 rm -rf $ROOT/crons
 
+mkdir -p $PERSISTENT/admin/lang/overrides $PERSISTENT/lang/overrides
+rm -rf $ROOT/admin/lang/overrides $ROOT/lang/overrides
+ln -s $PERSISTENT/admin/lang/overrides $ROOT/admin/lang
+ln -s $PERSISTENT/lang/overrides $ROOT/lang
+chown -R www-data.www-data $PERSISTENT/admin/lang/overrides $PERSISTENT/lang/overrides
+
+mkdir -p $PERSISTENT/resources/{domains,country}
+touch $PERSISTENT/resources/domains/whois.json
+touch $PERSISTENT/resources/domains/additionalfields.php
+touch $PERSISTENT/resources/country/countries.json
+rm -f $ROOT/resources/domains/whois.json $ROOT/resources/domains/additionalfields.php $ROOT/resources/country/countries.json
+ln -s $PERSISTENT/resources/domains/whois.json $ROOT/resources/domains
+ln -s $PERSISTENT/resources/domains/additionalfields.php $ROOT/resources/domains
+ln -s $PERSISTENT/resources/country/countries.json $ROOT/resources/country
+chown -R www-data.www-data $PERSISTENT/resources
+
 set +e
 KDPLUGIN=$(ls $PERSISTENT/whmcs-kuberdock-plugin*.zip 2>/dev/null)
 set -e
@@ -131,6 +147,6 @@ grep -q "DB_PASSWORD LICENSE" /root/.bashrc > /dev/null 2>&1 \
 
 HOUR=$(($RANDOM%24))
 MIN=$(($RANDOM%60))
-crontab -l | grep -q "cron.php|dbdump.sh" || (echo "*/5 *  *  *  * php -q $PERSISTENT/crons/cron.php"; echo "$MIN $HOUR  *  *  * /dbdump.sh") | crontab -
+crontab -l | grep -q "cron.php|dbdump.sh" || (echo "*/5 *  *  *  * php -q $PERSISTENT/crons/cron.php"; echo "$MIN $HOUR  *  *  * /dbdump.sh"; echo "*/5 * * * * php -q /var/opt/persistent/crons/pop.php";) | crontab -
 
 exec /usr/sbin/php5-fpm

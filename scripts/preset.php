@@ -84,18 +84,27 @@ try {
         $smtp_host = getenv('SMTP_HOST');
         $smtp_password = getenv('SMTP_PASSWORD');
         $smtp_port = getenv('SMTP_PORT');
-        $smtp_ssl = getenv('SMTP_SSL');
+        $smtp_protocol = getenv('SMTP_PROTOCOL');
         $domain = getenv('DOMAIN');
+        $from_email = getenv('FROM_EMAIL');
 
         $st = $db->prepare("UPDATE tblconfiguration SET value=? WHERE setting='SMTPUsername'");
         $st->execute(array($smtp_user));
         $st = $db->prepare("UPDATE tblconfiguration SET value=? WHERE setting='MailType'");
         $st->execute(array('smtp'));
 
-        if ($domain) {
+        if ($from_email) {
             $st = $db->prepare("UPDATE tblconfiguration SET value=? WHERE setting='Email'");
-            $st->execute(array('noreply@' . $domain));
+            $st->execute(array($from_email));
+                
         }
+        else {
+            if ($domain) {
+                $st = $db->prepare("UPDATE tblconfiguration SET value=? WHERE setting='Email'");
+                $st->execute(array('noreply@' . $domain));
+            }
+        }
+        
         if ($smtp_host) {
             $st = $db->prepare("UPDATE tblconfiguration SET value=? WHERE setting='SMTPHost'");
             $st->execute(array($smtp_host));
@@ -108,15 +117,17 @@ try {
             $st = $db->prepare("UPDATE tblconfiguration SET value=? WHERE setting='SMTPPort'");
             $st->execute(array($smtp_port));
         }
-        if ($smtp_ssl) {
+        if ($smtp_protocol) {
             $st = $db->prepare("UPDATE tblconfiguration SET value=? WHERE setting='SMTPSSL'");
-            $st->execute(array($smtp_ssl));
+            $st->execute(array($smtp_protocol));
         }
     }
     
     if ($domain) {
         $st = $db->prepare("UPDATE tblconfiguration SET value=? WHERE setting='SystemURL'");
         $st->execute(array('http://' . $domain));
+        $st = $db->prepare("UPDATE tblconfiguration SET value=? WHERE setting='Domain'");
+        $st->execute(array('http://' . $domain . '/'));
     }
     
     if ($ingress) {
