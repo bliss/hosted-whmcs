@@ -96,11 +96,14 @@ try {
         if ($from_email) {
             $st = $db->prepare("UPDATE tblconfiguration SET value=? WHERE setting='Email'");
             $st->execute(array($from_email));
-                
+            $st = $db->prepare("UPDATE tblconfiguration SET value=? WHERE setting='SystemEmailsFromEmail'");
+            $st->execute(array($from_email));
         }
         else {
             if ($domain) {
                 $st = $db->prepare("UPDATE tblconfiguration SET value=? WHERE setting='Email'");
+                $st->execute(array('noreply@' . $domain));
+                $st = $db->prepare("UPDATE tblconfiguration SET value=? WHERE setting='SystemEmailsFromEmail'");
                 $st->execute(array('noreply@' . $domain));
             }
         }
