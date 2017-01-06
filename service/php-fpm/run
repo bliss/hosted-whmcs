@@ -91,43 +91,20 @@ EOF
         sleep 15
     done
     set -e
-else
-    VERSIONS=/updates/versions.txt
-    if [ -e $VERSIONS ];then
-        CURRENT=$(tail -n 1 $VERSIONS)
-        COUNTER=1
-        set +e
-        while [[ $COUNTER -le 20 ]];do
-            echo "Attempt $COUNTER to get current version..."
-            LAST=$(mysql -u $DB_USERNAME -p$DB_PASSWORD -h $DB_HOST $DB_NAME --skip-column-names -e "SELECT value FROM tblconfiguration WHERE setting='Version'")
-            EXIT_CODE=$?
-            test $EXIT_CODE -eq 0 && break
-            COUNTER=$(( COUNTER+1 ))
-            sleep 15
-        done
-        set -e
-        if [[ "$EXIT_CODE" -eq 0 && "$LAST" != "$CURRENT" ]];then
-            POS=$(grep -n $LAST $VERSIONS|cut -f1 -d:)
-            if [ -z "$POS" ]; then
-                while IFS= read -r LINE;do
-                    DUMPS+=($LINE)
-                done < $VERSIONS
-                [[ $LINE ]] && DUMPS+=("$LINE")
-            else
-                POS=$(( POS+1 ))
-                while IFS= read -r LINE;do
-                    DUMPS+=($LINE)
-                done < <(tail --lines=+$POS $VERSIONS)
-                [[ $LINE ]] && DUMPS+=("$LINE")
-            fi
-            for i in ${DUMPS[@]};do
-                echo "Applying $i..."
-                mysql -u $DB_USERNAME -p$DB_PASSWORD -h $DB_HOST $DB_NAME < /updates/$i.sql
-            done
-        fi
-    fi
 fi
+
 test -e $ROOT/configuration.php || ln -s $WHMCSCONF $ROOT
+
+COUNTER=1
+set +e
+while [[ $COUNTER -le 20 ]];do
+    echo "Attempt $COUNTER to check if update is wanted"
+    TERM=xterm php /var/opt/whmcs/install/bin/installer.php --upgrade -n
+    test $? -eq 0 && break
+    COUNTER=$(( COUNTER+1 ))
+    sleep 15
+done
+set -e
 
 php /preset.php
 
@@ -138,8 +115,12 @@ done
 set +e
 rm -rf $ROOT/install
 chown -R www-data.www-data $ROOT/*
+find $ROOT -type f -exec chmod u=rw,g-rwx,o-rwx {} \;
 chown -R www-data.www-data $PERSISTENT/*
 chown root.root $WHMCSCONF
+find $PERSISTENT -type f -exec chmod u=rw,g-rwx,o-rwx {} \;
+test -d $PERSISTENT/hosted-dumps && chmod -R o+r $PERSISTENT/hosted-dumps
+test -d $PERSISTENT/lang/overrides && chmod -R o+rw $PERSISTENT/lang/overrides
 set -e
 
 grep -q "DB_PASSWORD LICENSE" /root/.bashrc > /dev/null 2>&1 \
