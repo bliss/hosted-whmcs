@@ -79,6 +79,9 @@ if [[ ! -e $WHMCSCONF ]];then
 \$crons_dir = '$PERSISTENT/crons';
 \$mysql_charset = 'utf8';
 EOF
+    if [[ -n $http_proxy && -n $https_proxy ]];then
+        echo "\$outbound_http_proxy = '$http_proxy'; // your proxy address" >> $WHMCSCONF
+    fi
     test -e $ROOT/configuration.php || ln -s $WHMCSCONF $ROOT
     chown www-data.www-data $WHMCSCONF
     COUNTER=1

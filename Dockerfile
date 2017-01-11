@@ -66,7 +66,6 @@ RUN test -d /var/opt/persistent || mkdir -p /var/opt/persistent
 COPY src/whmcs*.zip /
 
 COPY service/ /etc/service
-COPY updates/ /updates
 
 COPY runit-docker_1.1_amd64.deb /
 RUN dpkg -i /runit-docker_1.1_amd64.deb && rm -f /runit-docker_1.1_amd64.deb
