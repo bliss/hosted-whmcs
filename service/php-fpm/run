@@ -120,10 +120,11 @@ rm -rf $ROOT/install
 chown -R www-data.www-data $ROOT/*
 find $ROOT -type f -exec chmod u=rw,g-rwx,o-rwx {} \;
 chown -R www-data.www-data $PERSISTENT/*
-chown root.root $WHMCSCONF
 find $PERSISTENT -type f -exec chmod u=rw,g-rwx,o-rwx {} \;
 test -d $PERSISTENT/hosted-dumps && chmod -R o+r $PERSISTENT/hosted-dumps
 test -d $PERSISTENT/lang/overrides && chmod -R o+rw $PERSISTENT/lang/overrides
+chown root.www-data $WHMCSCONF
+chmod u=rw,g=r,o-rwx $WHMCSCONF
 set -e
 
 grep -q "DB_PASSWORD LICENSE" /root/.bashrc > /dev/null 2>&1 \
