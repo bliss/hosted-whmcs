@@ -1,5 +1,5 @@
 ## Introduction
-This Dockerfile will build a container image for nginx with php-fpm for running WHMCS. It ships with ionCube loader as well as WHMCS itself (v7.0 RC1 at present). The image is based on Ubuntu 14.04 and nginx+php-fpm.
+This Dockerfile will build a container image for nginx with php-fpm for running WHMCS. It ships with ionCube loader as well as WHMCS itself (v7.1.1 at present). The image is based on Ubuntu 14.04 and nginx+php-fpm.
 
 **Note**: You will need a valid [WHMCS license](http://www.whmcs.com) to use WHMCS.
 
